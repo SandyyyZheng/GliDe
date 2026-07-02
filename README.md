@@ -1,6 +1,8 @@
-# GliDe - Glitch Detection in Gameplay Videos
+# GliDe — Glitch Detection in Gameplay Videos
 
-A LangGraph-based multimodal LLM pipeline for automated video game glitch detection.
+An agentic, LangGraph-based multimodal pipeline for automated video game glitch detection.
+
+[📄 Paper](https://arxiv.org/abs/2604.07818) | [🤗 Dataset](https://huggingface.co/datasets/PLACEHOLDER) | [🐙 Code](https://github.com/PLACEHOLDER)
 
 ---
 
@@ -18,7 +20,6 @@ GliDe processes a video through five sequential stages:
 
 ---
 
-
 ## Tools
 
 | Tool | Status | Description |
@@ -31,15 +32,23 @@ GliDe processes a video through five sequential stages:
 
 ---
 
-## Quick Start
+## Installation
 
-### 1. Install dependencies
+### 1. Install SAM3
+
+`object_tracking` requires [SAM3](https://github.com/facebookresearch/sam3). Follow the official installation instructions in the SAM3 repository before proceeding. If you skip this step, the `object_tracking` tool will be automatically disabled and the rest of the pipeline will still work.
+
+### 2. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Run with a local vLLM server
+---
+
+## Quick Start
+
+### Run with a local vLLM server
 
 ```bash
 # Start vLLM first:
@@ -48,7 +57,7 @@ pip install -r requirements.txt
 python run.py --video data/videos/video_name.mp4
 ```
 
-### 3. Run with OpenAI
+### Run with OpenAI
 
 ```bash
 python run.py \
@@ -59,9 +68,21 @@ python run.py \
     --game-name "GTA V"
 ```
 
-### 4. Batch processing
+### Batch processing
 
-Process all videos in a folder. Per-video reports and logs are written as usual; a consolidated `batch_report.json` is also saved.
+Two folder layouts are supported. Per-video reports and logs are written as usual; a consolidated `batch_report.json` is also saved.
+
+**Benchmark layout** (`<GameName>/<video.mp4>` sub-folders, e.g. VideoGlitchBench) — game name is inferred automatically from each sub-folder name:
+
+```bash
+python run.py \
+    --video-dir /path/to/VideoGlitchBench/ \
+    --api-key $OPENAI_API_KEY \
+    --api-base https://api.openai.com/v1 \
+    --model gpt-4o
+```
+
+**Flat layout** (all videos directly in one folder) — supply a game name explicitly:
 
 ```bash
 python run.py \
@@ -98,7 +119,7 @@ The report is saved to `{output_dir}/results/{video_name}_report.json`:
 
 ### Batch
 
-A consolidated report is saved to `{output_dir}/results/batch_report.json` as a JSON array of per-video reports:
+A consolidated report is saved to `{output_dir}/results/batch_report.json` as a JSON array of per-video reports. In benchmark layout each entry carries its own `game_name` derived from the sub-folder:
 
 ```json
 [
@@ -111,7 +132,7 @@ A consolidated report is saved to `{output_dir}/results/batch_report.json` as a 
   },
   {
     "video_name": "clip_02",
-    "game_name": "GTA V",
+    "game_name": "Black Mesa",
     "no_bugs": true,
     "bugs": [],
     "time_nodes": []
@@ -163,7 +184,8 @@ cfg.scanner.temperature = 0.3
 cfg.scanner.max_tokens  = 512
 
 cfg.analyzer.max_iterations      = 5     # max Planner→Executor→Reflector cycles
-cfg.analyzer.confidence_threshold = 0.70 # stop when Judge reaches this confidence
+cfg.analyzer.confidence_threshold = 0.80 # stop when Judge reaches this confidence
+cfg.analyzer.sam3_gpus            = [1]  # GPU(s) for SAM3 (keep separate from the VLM GPU)
 
 cfg.grounder.frames_per_window = 8  # must match preprocess.window_size
 
@@ -174,20 +196,34 @@ cfg.summarizer.fps = 4.0   # must match preprocess.target_fps
 
 ## Evaluation
 
-Evaluation compares a `batch_report.json` against a ground truth file using LLM-based description scoring (0–5) and temporal IoU, then reports precision, recall, and F1 in both raw and IoU-weighted forms.
+`groundtruth.json` is our manually annotated dataset, containing per-video ground-truth glitch descriptions and temporal intervals in the same format as the pipeline output.
 
-### 1. Start a scoring LLM
+Evaluation compares a `batch_report.json` against `groundtruth.json` using LLM-based description scoring (0–5) and temporal IoU, then reports precision, recall, and F1 in both raw and IoU-weighted forms.
 
-Any OpenAI-compatible server works. With a local vLLM:
+### Option A — Local vLLM scoring model
 
 ```bash
+# Start a scoring LLM (separate from the detection model):
 CUDA_VISIBLE_DEVICES=2 vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8001 --max-model-len 8192
+
+python evaluation/run.py \
+    --predictions data/results/batch_report.json \
+    --groundtruth groundtruth.json \
+    --api-base http://localhost:8001/v1 \
+    --model meta-llama/Llama-3.1-8B-Instruct \
+    --output data/results/eval.json
 ```
 
-### 2. Run evaluation
+### Option B — OpenAI API scoring model
 
 ```bash
-python evaluation/run.py --predictions data/results/batch_report.json --groundtruth groundtruth.json --api-base http://localhost:8001/v1 --model meta-llama/Llama-3.1-8B-Instruct --output data/results/eval.json
+python evaluation/run.py \
+    --predictions data/results/batch_report.json \
+    --groundtruth groundtruth.json \
+    --api-key $OPENAI_API_KEY \
+    --api-base https://api.openai.com/v1 \
+    --model gpt-4o-mini \
+    --output data/results/eval.json
 ```
 
 `--output` is optional; if provided, per-video scores and match details are saved to the specified JSON file.
@@ -200,3 +236,18 @@ python evaluation/run.py --predictions data/results/batch_report.json --groundtr
 | `mean_iou` | Average temporal IoU over matched pairs |
 | `precision / recall / f1` | Score-weighted detection metrics (max score = 5) |
 | `precision_iou / recall_iou / f1_iou` | Same metrics further weighted by temporal IoU |
+
+---
+
+## Citation
+
+If you find this work useful, please cite:
+
+```bibtex
+@article{zheng2026open,
+  title={Open-Ended Video Game Glitch Detection with Agentic Reasoning and Temporal Grounding},
+  author={Zheng, Muyang and Zhou, Tong and Wu, Geyang and Lin, Zihao and Wang, Haibo and Huang, Lifu},
+  journal={arXiv preprint arXiv:2604.07818},
+  year={2026}
+}
+```

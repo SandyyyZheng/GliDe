@@ -6,8 +6,11 @@ Usage:
     # Single video
     python run.py --video path/to/video.mp4 [options]
 
-    # Batch: all videos in a folder
-    python run.py --video-dir path/to/folder/ [options]
+    # Batch: flat folder (all videos share one game name)
+    python run.py --video-dir data/videos/ --game-name "GTA V" [options]
+
+    # Batch: benchmark structure (GameName/video.mp4 sub-folders)
+    python run.py --video-dir /path/to/VideoGlitchBench/ [options]
 
 Examples:
     # Local vLLM server (default)
@@ -19,8 +22,11 @@ Examples:
         --api-base https://api.openai.com/v1 \
         --model gpt-4o
 
-    # Batch processing
-    python run.py --video-dir data/videos/ --game-name "GTA V"
+    # Benchmark batch (game name inferred from sub-folder name)
+    python run.py --video-dir /path/to/VideoGlitchBench/ \
+        --api-key $OPENAI_API_KEY \
+        --api-base https://api.openai.com/v1 \
+        --model gpt-4o
 """
 
 import argparse
@@ -145,27 +151,65 @@ def run_single(video_path: Path, cfg: BugAgentConfig, game_name: str) -> dict:
     return final_state.get("final_report", {})
 
 
+def _collect_videos(video_dir: Path, game_name: str) -> list:
+    """
+    Collect (video_path, game_name) pairs from video_dir.
+
+    Two layouts are supported:
+      - Benchmark layout: video_dir/<GameName>/<video.mp4>
+        Game name is inferred from the sub-folder name; --game-name is ignored.
+      - Flat layout: video_dir/<video.mp4>
+        All videos share the game_name argument.
+
+    Benchmark layout is detected when at least one direct sub-directory of
+    video_dir contains video files.
+    """
+    game_dirs = sorted(p for p in video_dir.iterdir() if p.is_dir())
+    benchmark_pairs = []
+    for game_dir in game_dirs:
+        videos_in_dir = sorted(
+            p for p in game_dir.iterdir()
+            if p.is_file() and p.suffix.lower() in _VIDEO_EXTENSIONS
+        )
+        for v in videos_in_dir:
+            benchmark_pairs.append((v, game_dir.name))
+
+    if benchmark_pairs:
+        return benchmark_pairs
+
+    # Fall back to flat layout
+    flat_videos = sorted(
+        p for p in video_dir.iterdir()
+        if p.is_file() and p.suffix.lower() in _VIDEO_EXTENSIONS
+    )
+    return [(v, game_name) for v in flat_videos]
+
+
 def run_batch(video_dir: Path, cfg: BugAgentConfig, game_name: str) -> None:
     """
-    Process every video in video_dir and write a consolidated batch report.
+    Process videos under video_dir and write a consolidated batch report.
+
+    Supports two layouts:
+      - Benchmark: video_dir/<GameName>/<video.mp4>  (game name from sub-folder)
+      - Flat:      video_dir/<video.mp4>             (game name from --game-name)
 
     Per-video JSON reports and logs are written as usual.
     A merged batch_report.json is saved to {output_dir}/results/.
     """
-    videos = sorted(
-        p for p in video_dir.iterdir()
-        if p.is_file() and p.suffix.lower() in _VIDEO_EXTENSIONS
-    )
+    pairs = _collect_videos(video_dir, game_name)
 
-    if not videos:
+    if not pairs:
         print(f"No video files found in {video_dir}")
         sys.exit(1)
+
+    benchmark_mode = any(v.parent != video_dir for v, _ in pairs)
+    layout_label = "benchmark (game name from sub-folder)" if benchmark_mode else "flat"
 
     print(f"\nBugAgent — Batch Mode")
     print(f"{'=' * 60}")
     print(f"Folder:  {video_dir}")
-    print(f"Videos:  {len(videos)}")
-    print(f"Game:    {game_name}")
+    print(f"Layout:  {layout_label}")
+    print(f"Videos:  {len(pairs)}")
     print(f"Model:   {cfg.llm.model}")
     print(f"API:     {cfg.llm.api_base}")
     print(f"Output:  {cfg.output_dir}")
@@ -174,16 +218,16 @@ def run_batch(video_dir: Path, cfg: BugAgentConfig, game_name: str) -> None:
     all_reports = []
     failed = []
 
-    for idx, video_path in enumerate(videos, 1):
-        print(f"\n[{idx}/{len(videos)}] {video_path.name}")
+    for idx, (video_path, gname) in enumerate(pairs, 1):
+        print(f"\n[{idx}/{len(pairs)}] {video_path.parent.name}/{video_path.name}  (game: {gname})")
         print(f"{'-' * 40}")
         try:
-            report = run_single(video_path, cfg, game_name)
+            report = run_single(video_path, cfg, gname)
             all_reports.append(report)
             _print_report(report)
         except Exception as e:
             print(f"  ERROR: {e}")
-            failed.append({"video": video_path.name, "error": str(e)})
+            failed.append({"video": str(video_path), "error": str(e)})
 
     # Write consolidated batch report
     batch_output = Path(cfg.output_dir) / "results" / "batch_report.json"
