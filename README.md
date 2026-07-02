@@ -1,12 +1,14 @@
-# GliDe — Glitch Detection in Gameplay Videos
+# 🪐 GliDe — Open-Ended Video Game Glitch Detection with Agentic Reasoning and Temporal Grounding
 
 An agentic, LangGraph-based multimodal pipeline for automated video game glitch detection.
 
-[📄 Paper](https://arxiv.org/abs/2604.07818) | [🤗 Dataset](https://huggingface.co/datasets/SandyZheng33/VideoGlitchBench) | [🐙 Code](https://github.com/SandyyyZheng/GliDe)
+[![Dataset](https://img.shields.io/badge/Dataset-HuggingFace-yellow)](https://huggingface.co/datasets/SandyZheng33/VideoGlitchBench)
+
+[![Paper](https://img.shields.io/badge/Paper-arXiv-red)](https://arxiv.org/pdf/2604.07818)
 
 ---
 
-## Architecture
+## 🏔️ Architecture
 
 ![Framework](figure/framework.jpg)
 
@@ -20,7 +22,7 @@ GliDe processes a video through five sequential stages:
 
 ---
 
-## Tools
+## ☔ Tools
 
 | Tool | Status | Description |
 |------|--------|-------------|
@@ -32,7 +34,7 @@ GliDe processes a video through five sequential stages:
 
 ---
 
-## Installation
+## 🧭 Installation
 
 ### 1. Install SAM3
 
@@ -46,7 +48,7 @@ pip install -r requirements.txt
 
 ---
 
-## Quick Start
+## 🌪️ Quick Start
 
 ### Run with a local vLLM server
 
@@ -95,7 +97,7 @@ python run.py \
 
 ---
 
-## Output
+## 🛸 Output
 
 ### Single video
 
@@ -142,7 +144,7 @@ A consolidated report is saved to `{output_dir}/results/batch_report.json` as a 
 
 ---
 
-## LangGraph Flow
+## 🛰️ LangGraph Flow
 
 GliDe uses [LangGraph](https://github.com/langchain-ai/langgraph)'s `StateGraph` to wire the pipeline together. Each stage is a **node** that reads from and writes to a shared `BugAgentState` TypedDict. State is passed immutably between nodes — each node returns only the keys it updates.
 
@@ -158,7 +160,7 @@ preprocess_node → scanner_node
 
 ---
 
-## Configuration Reference
+## 🧱 Configuration Reference
 
 ```python
 from config import BugAgentConfig
@@ -194,7 +196,7 @@ cfg.summarizer.fps = 4.0   # must match preprocess.target_fps
 
 ---
 
-## Evaluation
+## ⚓ Evaluation
 
 `groundtruth.json` is our manually annotated dataset, containing per-video ground-truth glitch descriptions and temporal intervals in the same format as the pipeline output.
 
@@ -239,7 +241,7 @@ python evaluation/run.py \
 
 ---
 
-## Citation
+## 🌟 Citation
 
 If you find this work useful, please cite:
 
