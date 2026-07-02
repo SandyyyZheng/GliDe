@@ -1,10 +1,8 @@
-# 🪐 GliDe — Open-Ended Video Game Glitch Detection with Agentic Reasoning and Temporal Grounding
+# 🪐 Open-Ended Video Game Glitch Detection with Agentic Reasoning and Temporal Grounding
 
-An agentic, LangGraph-based multimodal pipeline for automated video game glitch detection.
+This is the official code repository for **GliDe**, an agentic, LangGraph-based multimodal pipeline for automated video game glitch detection. We also proposed the **VideoGlitchBench** dataset.
 
-[![Dataset](https://img.shields.io/badge/Dataset-HuggingFace-yellow)](https://huggingface.co/datasets/SandyZheng33/VideoGlitchBench)
-
-[![Paper](https://img.shields.io/badge/Paper-arXiv-red)](https://arxiv.org/pdf/2604.07818)
+[![Dataset](https://img.shields.io/badge/Dataset-HuggingFace-yellow)](https://huggingface.co/datasets/SandyZheng33/VideoGlitchBench)  [![Paper](https://img.shields.io/badge/Paper-arXiv-red)](https://arxiv.org/pdf/2604.07818)
 
 ---
 
@@ -234,12 +232,15 @@ python evaluation/run.py \
 
 | Metric | Description |
 |--------|-------------|
-| `mean_score` | Average LLM description quality score (0–5) over matched pairs |
 | `mean_iou` | Average temporal IoU over matched pairs |
 | `precision / recall / f1` | Score-weighted detection metrics (max score = 5) |
 | `precision_iou / recall_iou / f1_iou` | Same metrics further weighted by temporal IoU |
 
 ---
+
+## 🚥 License
+
+This project is under the [MIT license](LICENSE).
 
 ## 🌟 Citation
 
