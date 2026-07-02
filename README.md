@@ -2,7 +2,7 @@
 
 An agentic, LangGraph-based multimodal pipeline for automated video game glitch detection.
 
-[📄 Paper](https://arxiv.org/abs/2604.07818) | [🤗 Dataset](https://huggingface.co/datasets/PLACEHOLDER) | [🐙 Code](https://github.com/PLACEHOLDER)
+[📄 Paper](https://arxiv.org/abs/2604.07818) | [🤗 Dataset](https://huggingface.co/datasets/SandyZheng33/VideoGlitchBench) | [🐙 Code](https://github.com/SandyyyZheng/GliDe)
 
 ---
 
